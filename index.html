@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HashKey Dev Dashboard</title>
+    <!-- ethers.js for Web3 interaction -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js" type="application/javascript"></script>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        
+        :root {
+            --hk-cyan: #00f2fe;
+            --hk-blue: #4facfe;
+            --bg-dark: #0a0a0a;
+            --card-dark: #141414;
+            --border-dark: #262626;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: #e5e5e5;
+            margin: 0;
+            padding: 0 0 32px 0; /* Space for health bar */
+        }
+        
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .card {
+            background-color: var(--card-dark);
+            border: 1px solid var(--border-dark);
+            border-radius: 16px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .card:hover {
+            border-color: #404040;
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.5);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--hk-cyan) 0%, var(--hk-blue) 100%);
+            color: #000;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn-primary:hover {
+            filter: brightness(1.1);
+            box-shadow: 0 0 20px rgba(0, 242, 254, 0.3);
+            transform: scale(1.02);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-secondary {
+            background-color: #1f1f1f;
+            color: #fff;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            border: 1px solid #333;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #2a2a2a;
+            border-color: #444;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 10px;
+            position: relative;
+        }
+
+        .status-dot::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(2.5); opacity: 0; }
+        }
+
+        .status-online { background-color: #10b981; }
+        .status-online::after { background-color: #10b981; }
+        
+        .status-offline { background-color: #ef4444; }
+        .status-offline::after { background-color: #ef4444; }
+        
+        .status-warning { background-color: #f59e0b; }
+        .status-warning::after { background-color: #f59e0b; }
+
+        .gradient-text {
+            background: linear-gradient(90deg, var(--hk-cyan) 0%, var(--hk-blue) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .glass-nav {
+            background: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .status-bar {
+            background: rgba(10, 10, 10, 0.9);
+            backdrop-filter: blur(8px);
+            border-top: 1px solid var(--border-dark);
+            font-size: 11px;
+            height: 32px;
+        }
+
+        .notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        .notification {
+            pointer-events: auto;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            padding: 12px 20px;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            animation: slideIn 0.3s ease forwards;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .notification.success { border-color: #10b981; }
+        .notification.error { border-color: #ef4444; }
+
+        .input-field {
+            background: #0a0a0a;
+            border: 1px solid #262626;
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            color: #fff;
+            width: 100%;
+            transition: all 0.2s ease;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--hk-cyan);
+            box-shadow: 0 0 0 2px rgba(0, 242, 254, 0.1);
+        }
+
+        .loading-spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(0,0,0,0.1);
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .copy-badge {
+            font-size: 10px;
+            background: var(--hk-cyan);
+            color: #000;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 800;
+            text-transform: uppercase;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        #walletAddress:hover .copy-badge {
+            opacity: 1;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0a0a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #262626;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #333;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-cyan-500/30">
+    <!-- Notifications -->
+    <div id="notificationContainer" class="notification-container"></div>
+
+    <!-- Header -->
+    <header class="border-b border-neutral-800 p-4 sticky top-0 glass-nav z-50">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10h10V2z"/><path d="M22 12H12v10h10V12z"/><path d="M12 12H2v10h10V12z"/><path d="M22 2H12v10h10V2z"/></svg>
+                </div>
+                <h1 class="text-2xl font-bold tracking-tight hidden sm:block">HashKey <span class="gradient-text">Dev</span></h1>
+            </div>
+            <button id="connectBtn" class="btn-primary gap-2">
+                <svg id="walletIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+                <span id="btnText">Connect Wallet</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-6xl mx-auto w-full p-6 md:p-12">
+        <!-- Hero Section -->
+        <div class="mb-16 text-center md:text-left">
+            <h2 class="text-5xl md:text-7xl font-extrabold mb-6 tracking-tight leading-tight">
+                HashKey Chain <br class="hidden md:block">
+                <span class="gradient-text">Developer Dashboard</span>
+            </h2>
+            <p class="text-neutral-400 text-xl max-w-2xl leading-relaxed">
+                The essential MVP for HashKey Chain developers. Connect your wallet, monitor assets, and access core infrastructure tools instantly.
+            </p>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Wallet Info Card -->
+            <div class="card p-8 lg:col-span-2 flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-start mb-10">
+                        <h3 class="text-sm font-bold text-neutral-500 uppercase tracking-[0.2em]">Wallet Overview</h3>
+                        <div id="connectionStatus" class="flex items-center text-sm font-medium text-neutral-400 bg-neutral-900 px-3 py-1.5 rounded-full border border-neutral-800">
+                            <span class="status-dot status-offline"></span>
+                            Not Connected
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-10">
+                        <div>
+                            <label class="block text-xs font-bold text-neutral-600 uppercase tracking-widest mb-3">Active Address</label>
+                            <div id="walletAddress" class="mono text-xl md:text-2xl break-all text-neutral-100 font-medium cursor-pointer flex items-center gap-3 group">
+                                <span id="addressText">0x0000...0000</span>
+                                <span class="copy-badge">Copy</span>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                            <div>
+                                <label class="block text-xs font-bold text-neutral-600 uppercase tracking-widest mb-3">HSK Balance</label>
+                                <div id="walletBalance" class="text-4xl font-black text-white">0.0000 <span class="text-lg font-medium text-neutral-500 ml-1">HSK</span></div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-neutral-600 uppercase tracking-widest mb-3">Current Network</label>
+                                <div id="networkName" class="text-2xl font-bold text-neutral-200">--</div>
+                                <div id="chainId" class="mono text-sm text-neutral-500 mt-1">Chain ID: --</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="networkWarning" class="hidden mt-12 p-5 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex flex-col sm:flex-row items-center gap-4 text-amber-200/90 text-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-500"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                        </div>
+                        <p>You are connected to the wrong network. Switch to HashKey Chain to interact with the ecosystem.</p>
+                    </div>
+                    <button id="switchNetworkBtn" class="sm:ml-auto bg-amber-500 text-black px-5 py-2 rounded-xl font-bold hover:bg-amber-400 transition-colors whitespace-nowrap">Switch Network</button>
+                </div>
+            </div>
+
+            <!-- Quick Links Card -->
+            <div class="card p-8">
+                <h3 class="text-sm font-bold text-neutral-500 uppercase tracking-[0.2em] mb-8">Send Transaction</h3>
+                <div id="txForm" class="space-y-4 opacity-50 pointer-events-none transition-opacity duration-300">
+                    <div>
+                        <label class="block text-[10px] font-bold text-neutral-600 uppercase tracking-widest mb-2">Recipient Address</label>
+                        <input type="text" id="recipientAddr" class="input-field" placeholder="0x...">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-neutral-600 uppercase tracking-widest mb-2">Amount (HSK)</label>
+                        <input type="number" id="sendAmount" class="input-field" placeholder="0.0" step="0.0001">
+                    </div>
+                    <button id="sendBtn" class="btn-primary w-full gap-2 mt-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                        Send HSK
+                    </button>
+                </div>
+
+                <div class="mt-12 pt-8 border-t border-neutral-800/50">
+                    <h3 class="text-sm font-bold text-neutral-500 uppercase tracking-[0.2em] mb-8">Ecosystem Tools</h3>
+                    <div class="space-y-4">
+                        <a href="https://faucet.hsk.xyz/" target="_blank" class="btn-secondary w-full justify-between group h-14">
+                            <span class="font-semibold">HSK Faucet</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-neutral-500 group-hover:text-cyan-400 transition-colors"><path d="M7 16.3c2.2 0 4-1.8 4-4 0-3.3-4-6.3-4-6.3S3 9 3 12.3c0 2.2 1.8 4 4 4z"/><path d="M12 22s8-4 8-10V5l-8-3-8 3v7"/><path d="M12 18.5v-13"/></svg>
+                        </a>
+                        <a href="https://hashkey.blockscout.com" target="_blank" class="btn-secondary w-full justify-between group h-14">
+                            <span class="font-semibold">Block Explorer</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-neutral-500 group-hover:text-cyan-400 transition-colors"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="mt-12 pt-8 border-t border-neutral-800/50">
+                    <h4 class="text-[10px] font-black text-neutral-600 uppercase tracking-[0.3em] mb-6">Chain Configuration</h4>
+                    <div class="space-y-4 text-sm">
+                        <div class="flex justify-between items-center">
+                            <span class="text-neutral-500 font-medium">Chain ID</span>
+                            <span class="mono bg-neutral-900 px-2 py-1 rounded border border-neutral-800 text-cyan-400">177</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-neutral-500 font-medium">Symbol</span>
+                            <span class="mono bg-neutral-900 px-2 py-1 rounded border border-neutral-800">HSK</span>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <span class="text-neutral-500 font-medium">RPC Endpoint</span>
+                            <span class="mono text-[10px] bg-neutral-900 p-2 rounded border border-neutral-800 break-all text-neutral-400">https://mainnet.hsk.xyz</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="border-t border-neutral-900 p-12 mt-20 bg-neutral-950/50">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8 text-neutral-500 text-sm">
+            <div class="flex items-center gap-2">
+                <div class="w-6 h-6 bg-neutral-800 rounded flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10h10V2z"/><path d="M22 12H12v10h10V12z"/><path d="M12 12H2v10h10V12z"/><path d="M22 2H12v10h10V2z"/></svg>
+                </div>
+                <span class="font-semibold text-neutral-400">HashKey Dev Dashboard</span>
+            </div>
+            <div class="flex gap-8 font-medium">
+                <a href="#" class="hover:text-cyan-400 transition-colors">Docs</a>
+                <a href="#" class="hover:text-cyan-400 transition-colors">GitHub</a>
+                <a href="#" class="hover:text-cyan-400 transition-colors">Twitter</a>
+            </div>
+            <div class="text-neutral-600">© 2026 HashKey Ecosystem. All rights reserved.</div>
+        </div>
+    </footer>
+
+    <!-- Network Health Bar -->
+    <div class="fixed bottom-0 left-0 w-full status-bar z-[60] px-4 flex items-center justify-between text-neutral-500 mono select-none">
+        <div class="flex items-center gap-4 overflow-hidden">
+            <div class="flex items-center gap-2 shrink-0">
+                <span id="healthDot" class="status-dot status-online !w-2 !h-2 !mr-0"></span>
+                <span class="font-bold text-neutral-400 hidden sm:inline">HashKey Mainnet</span>
+            </div>
+            <div class="h-3 w-[1px] bg-neutral-800 shrink-0"></div>
+            <div class="flex items-center gap-2 whitespace-nowrap">
+                <span class="text-[10px] text-neutral-600 uppercase font-black">Block</span>
+                <span id="healthBlockHeight" class="text-neutral-300">-------</span>
+            </div>
+            <div class="h-3 w-[1px] bg-neutral-800 shrink-0 hidden sm:block"></div>
+            <div class="items-center gap-2 hidden sm:flex whitespace-nowrap">
+                <span class="text-[10px] text-neutral-600 uppercase font-black">Last</span>
+                <span id="healthLastBlock" class="text-neutral-300">--s ago</span>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2 whitespace-nowrap">
+                <span class="text-[10px] text-neutral-600 uppercase font-black">Latency</span>
+                <span id="healthLatency" class="text-neutral-300">--ms</span>
+            </div>
+            <div class="h-3 w-[1px] bg-neutral-800 shrink-0"></div>
+            <div class="flex items-center gap-1">
+                <span class="w-1 h-1 rounded-full bg-cyan-500"></span>
+                <span class="text-[9px] font-bold text-cyan-500/80 uppercase">Live</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration for HashKey Chain
+        const HASHKEY_CHAIN_ID = 177;
+        const HASHKEY_CHAIN_PARAMS = {
+            chainId: '0xB1', // 177 in hex
+            chainName: 'HashKey Chain',
+            nativeCurrency: {
+                name: 'HashKey',
+                symbol: 'HSK',
+                decimals: 18
+            },
+            rpcUrls: ['https://mainnet.hsk.xyz'],
+            blockExplorerUrls: ['https://hashkey.blockscout.com']
+        };
+
+        let provider;
+        let signer;
+        let userAddress;
+
+        // UI Elements
+        const connectBtn = document.getElementById('connectBtn');
+        const btnText = document.getElementById('btnText');
+        const walletAddressEl = document.getElementById('walletAddress');
+        const addressTextEl = document.getElementById('addressText');
+        const walletBalanceEl = document.getElementById('walletBalance');
+        const networkNameEl = document.getElementById('networkName');
+        const chainIdEl = document.getElementById('chainId');
+        const connectionStatusEl = document.getElementById('connectionStatus');
+        const networkWarningEl = document.getElementById('networkWarning');
+        const switchNetworkBtn = document.getElementById('switchNetworkBtn');
+        const notificationContainer = document.getElementById('notificationContainer');
+        const txForm = document.getElementById('txForm');
+        const sendBtn = document.getElementById('sendBtn');
+        const recipientAddrInput = document.getElementById('recipientAddr');
+        const sendAmountInput = document.getElementById('sendAmount');
+
+        // Health Bar Elements
+        const healthBlockHeightEl = document.getElementById('healthBlockHeight');
+        const healthLastBlockEl = document.getElementById('healthLastBlock');
+        const healthLatencyEl = document.getElementById('healthLatency');
+        const healthDotEl = document.getElementById('healthDot');
+
+        let lastBlockTimestamp = 0;
+        let healthUpdateInterval;
+
+        /**
+         * Initialize the application and check for existing connections
+         */
+        async function init() {
+            // Wait for ethers to be available (handles potential CDN load delays)
+            if (typeof ethers === 'undefined') {
+                setTimeout(init, 100);
+                return;
+            }
+
+            // Initialize health polling immediately
+            startHealthPolling();
+
+            if (typeof window.ethereum !== 'undefined') {
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                
+                try {
+                    // Check if already connected
+                    const accounts = await provider.listAccounts();
+                    if (accounts.length > 0) {
+                        handleAccountsChanged(accounts);
+                    }
+                } catch (err) {
+                    console.error("Error checking accounts", err);
+                }
+
+                // Event Listeners
+                window.ethereum.on('accountsChanged', handleAccountsChanged);
+                window.ethereum.on('chainChanged', () => {
+                    // Refresh the page on chain change to ensure state consistency
+                    window.location.reload();
+                });
+
+                // Set connect button handler
+                connectBtn.onclick = () => {
+                    if (!userAddress) {
+                        connectWallet();
+                    } else {
+                        navigator.clipboard.writeText(userAddress);
+                        showNotification('Address copied to clipboard!', 'success');
+                    }
+                };
+            } else {
+                btnText.innerText = 'Install Wallet';
+                connectBtn.onclick = () => window.open('https://metamask.io/download/', '_blank');
+                showNotification('Web3 wallet not detected. Please install MetaMask or OKX Wallet.', 'error');
+            }
+        }
+
+        /**
+         * Request wallet connection
+         */
+        async function connectWallet() {
+            try {
+                connectBtn.disabled = true;
+                btnText.innerHTML = '<div class="loading-spinner"></div>';
+                
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                handleAccountsChanged(accounts);
+                showNotification('Wallet connected successfully!', 'success');
+            } catch (error) {
+                console.error("User rejected connection", error);
+                showNotification(error.message || 'Connection failed', 'error');
+                updateUI(false);
+            } finally {
+                connectBtn.disabled = false;
+            }
+        }
+
+        /**
+         * Handle account changes (connect/disconnect/switch)
+         */
+        async function handleAccountsChanged(accounts) {
+            if (accounts.length === 0) {
+                userAddress = null;
+                updateUI(false);
+                txForm.classList.add('opacity-50', 'pointer-events-none');
+            } else {
+                userAddress = accounts[0];
+                signer = provider.getSigner();
+                updateUI(true);
+                txForm.classList.remove('opacity-50', 'pointer-events-none');
+                await updateWalletInfo();
+            }
+        }
+
+        /**
+         * Fetch and display wallet data (balance, network)
+         */
+        async function updateWalletInfo() {
+            if (!userAddress) return;
+
+            try {
+                const network = await provider.getNetwork();
+                const balance = await provider.getBalance(userAddress);
+                
+                addressTextEl.innerText = userAddress;
+                walletBalanceEl.innerHTML = `${parseFloat(ethers.utils.formatEther(balance)).toFixed(4)} <span class="text-lg font-medium text-neutral-500 ml-1">HSK</span>`;
+                
+                // Network detection
+                if (network.chainId === HASHKEY_CHAIN_ID) {
+                    networkNameEl.innerText = 'HashKey Chain';
+                    networkNameEl.classList.add('text-cyan-400');
+                    connectionStatusEl.innerHTML = '<span class="status-dot status-online"></span> Connected to HashKey';
+                    networkWarningEl.classList.add('hidden');
+                } else {
+                    networkNameEl.innerText = network.name === 'unknown' ? 'Unsupported Network' : network.name;
+                    networkNameEl.classList.remove('text-cyan-400');
+                    connectionStatusEl.innerHTML = '<span class="status-dot status-warning"></span> Wrong Network';
+                    networkWarningEl.classList.remove('hidden');
+                }
+                
+                chainIdEl.innerText = `Chain ID: ${network.chainId}`;
+            } catch (err) {
+                console.error("Error updating wallet info", err);
+            }
+        }
+
+        /**
+         * Update UI elements based on connection state
+         */
+        function updateUI(isConnected) {
+            if (isConnected) {
+                const shortAddr = `${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
+                btnText.innerText = shortAddr;
+                connectBtn.classList.remove('btn-primary');
+                connectBtn.classList.add('btn-secondary');
+            } else {
+                btnText.innerText = 'Connect Wallet';
+                connectBtn.classList.add('btn-primary');
+                connectBtn.classList.remove('btn-secondary');
+                addressTextEl.innerText = '0x0000...0000';
+                walletBalanceEl.innerHTML = '0.0000 <span class="text-lg font-medium text-neutral-500 ml-1">HSK</span>';
+                networkNameEl.innerText = '--';
+                networkNameEl.classList.remove('text-cyan-400');
+                chainIdEl.innerText = 'Chain ID: --';
+                connectionStatusEl.innerHTML = '<span class="status-dot status-offline"></span> Not Connected';
+                networkWarningEl.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Send HSK transaction
+         */
+        async function sendTransaction() {
+            const recipient = recipientAddrInput.value.trim();
+            const amount = sendAmountInput.value;
+
+            if (!ethers.utils.isAddress(recipient)) {
+                showNotification('Invalid recipient address', 'error');
+                return;
+            }
+
+            if (!amount || parseFloat(amount) <= 0) {
+                showNotification('Invalid amount', 'error');
+                return;
+            }
+
+            try {
+                sendBtn.disabled = true;
+                sendBtn.innerHTML = '<div class="loading-spinner"></div> Sending...';
+
+                const tx = await signer.sendTransaction({
+                    to: recipient,
+                    value: ethers.utils.parseEther(amount)
+                });
+
+                showNotification('Transaction submitted! Waiting for confirmation...', 'success');
+                
+                await tx.wait();
+                
+                showNotification('Transaction confirmed!', 'success');
+                recipientAddrInput.value = '';
+                sendAmountInput.value = '';
+                await updateWalletInfo();
+            } catch (error) {
+                console.error("Transaction failed", error);
+                showNotification(error.reason || error.message || 'Transaction failed', 'error');
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                    Send HSK
+                `;
+            }
+        }
+
+        /**
+         * Show toast notification
+         */
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            
+            const icon = type === 'success' 
+                ? '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+                : '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+
+            notification.innerHTML = `${icon} <span>${message}</span>`;
+            notificationContainer.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateX(20px)';
+                setTimeout(() => notification.remove(), 300);
+            }, 4000);
+        }
+
+        /**
+         * Switch or add HashKey Chain to the wallet
+         */
+        async function switchNetwork() {
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: HASHKEY_CHAIN_PARAMS.chainId }],
+                });
+                showNotification('Switched to HashKey Chain', 'success');
+            } catch (switchError) {
+                // Error code 4902 indicates that the chain has not been added to the wallet
+                if (switchError.code === 4902) {
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [HASHKEY_CHAIN_PARAMS],
+                        });
+                        showNotification('HashKey Chain added to wallet', 'success');
+                    } catch (addError) {
+                        console.error("Failed to add network", addError);
+                        showNotification('Failed to add network', 'error');
+                    }
+                } else {
+                    console.error("Failed to switch network", switchError);
+                    showNotification('Failed to switch network', 'error');
+                }
+            }
+        }
+
+        // Event Handlers
+        walletAddressEl.onclick = () => {
+            if (!userAddress) return;
+            navigator.clipboard.writeText(userAddress);
+            showNotification('Address copied to clipboard!', 'success');
+        };
+
+        sendBtn.onclick = sendTransaction;
+
+        switchNetworkBtn.onclick = switchNetwork;
+
+        /**
+         * Poll for chain health data
+         */
+        async function startHealthPolling() {
+            const rpcProvider = new ethers.providers.JsonRpcProvider(HASHKEY_CHAIN_PARAMS.rpcUrls[0]);
+            
+            const updateHealth = async () => {
+                const startTime = Date.now();
+                try {
+                    const block = await rpcProvider.getBlock('latest');
+                    const latency = Date.now() - startTime;
+                    
+                    healthBlockHeightEl.innerText = block.number;
+                    healthLatencyEl.innerText = `${latency}ms`;
+                    lastBlockTimestamp = block.timestamp;
+                    
+                    // Update dot color based on latency
+                    healthDotEl.className = 'status-dot !w-2 !h-2 !mr-0 ' + 
+                        (latency < 200 ? 'status-online' : latency < 500 ? 'status-warning' : 'status-offline');
+                    
+                    updateTimeAgo();
+                } catch (err) {
+                    console.error("Health poll failed", err);
+                    healthDotEl.className = 'status-dot !w-2 !h-2 !mr-0 status-offline';
+                    healthLatencyEl.innerText = 'ERR';
+                }
+            };
+
+            const updateTimeAgo = () => {
+                if (lastBlockTimestamp === 0) return;
+                const now = Math.floor(Date.now() / 1000);
+                const diff = now - lastBlockTimestamp;
+                healthLastBlockEl.innerText = `${diff}s ago`;
+            };
+
+            // Initial update
+            updateHealth();
+            
+            // Poll block data every 10 seconds
+            setInterval(updateHealth, 10000);
+            
+            // Update "time ago" every second
+            setInterval(updateTimeAgo, 1000);
+        }
+
+        // Start the app
+        init();
+    </script>
+</body>
+</html>

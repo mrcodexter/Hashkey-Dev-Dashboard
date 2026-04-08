@@ -1,0 +1,5 @@
+{
+  "name": "HashKey Dev Dashboard",
+  "description": "A clean, modern Web3 frontend for HashKey Chain developers. Connect wallet, switch networks, and access essential tools like faucet, explorer, and bridge.",
+  "requestFramePermissions": []
+}

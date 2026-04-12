@@ -1,4 +1,4 @@
-# 1🚀 HashKey Web3 Dashboard
+# 🚀 HashKey Web3 Dashboard
 
 A unified dashboard for accessing essential Web3 tools on HashKey Chain.
 

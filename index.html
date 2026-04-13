@@ -507,8 +507,10 @@
                 };
             } else {
                 btnText.innerText = 'Install Wallet';
-                connectBtn.onclick = () => window.open('https://metamask.io/download/', '_blank');
-                showNotification('Web3 wallet not detected. Please install MetaMask or OKX Wallet.', 'error');
+                connectBtn.onclick = () => {
+                    window.open('https://metamask.io/download/', '_blank');
+                    showNotification('Web3 wallet not detected. Please install MetaMask or OKX Wallet.', 'error');
+                };
             }
         }
 
@@ -609,14 +611,14 @@
          */
         async function sendTransaction() {
             const recipient = recipientAddrInput.value.trim();
-            const amount = sendAmountInput.value;
+            const amount = sendAmountInput.value.trim();
 
             if (!ethers.utils.isAddress(recipient)) {
                 showNotification('Invalid recipient address', 'error');
                 return;
             }
 
-            if (!amount || parseFloat(amount) <= 0) {
+            if (!amount || isNaN(amount) || parseFloat(amount) <= 0) {
                 showNotification('Invalid amount', 'error');
                 return;
             }

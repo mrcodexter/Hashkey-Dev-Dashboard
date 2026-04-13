@@ -1,48 +1,20 @@
-# 🚀 HashKey Web3 Dashboard
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+</div>
 
-A unified dashboard for accessing essential Web3 tools on HashKey Chain.
+# Run and deploy your AI Studio app
 
-## 🔥 Problem
-Developers and users often need multiple platforms for:
-- Wallet setup  
-- Faucet access  
-- Blockchain explorer  
-- Asset bridging  
+This contains everything you need to run your app locally.
 
-This creates complexity and slows down onboarding.
+View your app in AI Studio: https://ai.studio/apps/c197b462-668a-4acb-b15a-170500e93003
 
-## 💡 Solution
-This project provides a **single dashboard** where users can:
-- Connect wallet  
-- Detect network automatically  
-- Add HashKey Chain if needed  
-- Access all tools in one place  
+## Run Locally
 
-## ⚙️ Features
-- 🔗 Wallet connection  
-- 🌐 Network detection  
-- 💧 Faucet integration  
-- 🔍 Blockchain explorer  
-- 🔄 Bridge support  
+**Prerequisites:**  Node.js
 
-## 🛠️ Tech Stack
-- Web3.js / Ethers.js  
-- JavaScript  
-- HTML/CSS  
-- HashKey Chain  
 
-## ▶️ Live Demo
-👉 https://ais-dev-hxf5s7xbgrtoqyr4shurrs-494597802977.asia-southeast1.run.app
-
-## 📈 Future Improvements
-- Transaction sending  
-- Smart contract interaction  
-- KYC integration  
-- Advanced developer tools  
-
-## 🎯 Impact
-Improves onboarding, reduces complexity, and boosts developer productivity in the HashKey ecosystem.
-
----
-
-⭐ If you like this project, give it a star!
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`
